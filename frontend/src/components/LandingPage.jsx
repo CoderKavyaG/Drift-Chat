@@ -45,6 +45,12 @@ function Navbar() {
 
         {/* Links */}
         <nav className="hidden md:flex items-center gap-8">
+          <a
+            href="/friends"
+            className="text-[#F4600C] text-sm uppercase tracking-widest font-bold hover:text-white transition-colors relative group"
+          >
+            Friends
+          </a>
           {["Features", "How It Works", "Community", "Pricing"].map((item) => (
             <a
               key={item}

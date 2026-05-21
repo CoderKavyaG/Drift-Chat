@@ -42,6 +42,15 @@ export async function getRoom(roomId) {
   return response.json();
 }
 
+export async function getFriends(chatIds = []) {
+  if (chatIds.length === 0) return { friends: [] };
+  const headers = await getAuthHeader();
+  const ids = chatIds.join(',');
+  const response = await fetch(`${API_URL}/api/friends?ids=${encodeURIComponent(ids)}`, { headers });
+  if (!response.ok) throw new Error('Failed to get friends');
+  return response.json();
+}
+
 export async function getFriendChat(chatId) {
   const headers = await getAuthHeader();
 

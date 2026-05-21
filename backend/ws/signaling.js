@@ -168,6 +168,9 @@ function initSignaling(server, redis) {
       case 'friend-accept':
         await handleFriendAccept(message, redis, connections, ghostId, ghostName, avatarId);
         break;
+      case 'friend-chat-message':
+        await handleFriendChatMessage(message, redis, connections, ghostId, ghostName);
+        break;
       case 'typing':
         handleRelay(message, connections, roomMembers, ghostId);
         break;
@@ -468,6 +471,43 @@ function initSignaling(server, redis) {
       }
     } catch (err) {
       console.error('[WS] Error accepting friend request:', err.message);
+    }
+  }
+
+  async function handleFriendChatMessage(message, redis, connections, ghostId, ghostName) {
+    const { chatId, text } = message;
+    if (!chatId || !text) return;
+
+    // Verify friendship exists and sender is a participant
+    const friendshipData = await redis.get(`friendship:${chatId}`);
+    if (!friendshipData) return;
+    const friendship = JSON.parse(friendshipData);
+    if (friendship.peer1 !== ghostId && friendship.peer2 !== ghostId) return;
+
+    // Sanitize text
+    const sanitized = text.replace(/<[^>]*>/g, '').substring(0, 500);
+    const msgObj = { ghostId, ghostName, text: sanitized, timestamp: Date.now() };
+
+    // Persist to Redis (same list the REST endpoint reads)
+    try {
+      await redis.lpush(`friendchat:${chatId}`, JSON.stringify(msgObj));
+      await redis.ltrim(`friendchat:${chatId}`, 0, 499);
+    } catch (err) {
+      console.error('[WS] Error saving friend chat message:', err.message);
+    }
+
+    // Relay to the other peer in real-time
+    const otherPeerId = friendship.peer1 === ghostId ? friendship.peer2 : friendship.peer1;
+    const otherWs = connections.get(otherPeerId);
+    if (otherWs && otherWs.readyState === 1) {
+      otherWs.send(JSON.stringify({
+        type: 'friend-chat-message',
+        chatId,
+        ghostId,
+        ghostName,
+        text: sanitized,
+        timestamp: msgObj.timestamp
+      }));
     }
   }
 

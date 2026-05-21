@@ -4,6 +4,7 @@ import { useIdentity } from '../hooks/useIdentity';
 import { useSignaling } from '../hooks/useSignaling';
 import { useWebRTC } from '../hooks/useWebRTC';
 import { joinRoom } from '../lib/api';
+import { saveFriend } from '../lib/friends';
 import { VideoTile } from '../components/VideoTile';
 import { ChatPanel } from '../components/ChatPanel';
 import { ControlBar } from '../components/ControlBar';
@@ -11,6 +12,7 @@ import { ActivePeersBar } from '../components/ActivePeersBar';
 import { ConnectionStatus } from '../components/ConnectionStatus';
 import { SettingsModal } from '../components/SettingsModal';
 import { ReportModal } from '../components/ReportModal';
+import { FriendRequestModal } from '../components/FriendRequestModal';
 import { GhostIdentityBadge } from '../components/GhostIdentityBadge';
 
 const AVATAR_COLORS = [
@@ -50,6 +52,10 @@ export function Room() {
   const [nextStrangerCountdown, setNextStrangerCountdown] = useState(null);
   const [loading, setLoading] = useState(!routeRoomId);
   const [localStreamReady, setLocalStreamReady] = useState(false);
+  // Friend request state
+  const [friendRequest, setFriendRequest] = useState(null); // { ghostId, ghostName, avatarId }
+  const [friendToast, setFriendToast] = useState(null);
+  const [sentFriendRequests, setSentFriendRequests] = useState(new Set());
 
   // Call WebRTC hook with signalingRef (now signalingRef is declared)
   const webRTC = useWebRTC(signalingRef);
@@ -203,6 +209,27 @@ export function Room() {
         }
         break;
 
+      case 'friend-request':
+        // Show the incoming friend request modal
+        setFriendRequest({
+          ghostId: message.fromPeerId,
+          ghostName: message.ghostName,
+          avatarId: message.avatarId
+        });
+        break;
+
+      case 'friend-accepted':
+        // Save to localStorage for persistence
+        saveFriend({
+          chatId: message.sharedChatId,
+          partnerGhostName: message.partnerGhostName,
+          partnerAvatarId: message.partnerAvatarId
+        });
+        // Show a toast
+        setFriendToast(`You're now friends with ${message.partnerGhostName}! 🎉`);
+        setTimeout(() => setFriendToast(null), 5000);
+        break;
+
       case 'room-killed':
         setRoomKilledOverlay(true);
         setTimeout(() => navigate('/'), 3000);
@@ -214,8 +241,6 @@ export function Room() {
       default:
         break;
     }
-  // webRTCRef.current is always current — no need to list webRTC as a dep.
-  // ghostId and navigate are the only real reactive values here.
   }, [ghostId, navigate]);
 
   // Signaling hook
@@ -518,18 +543,48 @@ export function Room() {
                 />
               )}
 
-              {/* Remote videos */}
+              {/* Remote videos with Add Friend overlay */}
               {peers.filter(peer => peer && peer.ghostId).map(peer => (
-                <VideoTile
-                  key={`remote-${peer.ghostId}`}
-                  stream={webRTC.remoteStreams.get(peer.ghostId)}
-                  ghostName={peer.ghostName}
-                  avatarId={peer.avatarId}
-                  isMuted={false}
-                  isLocal={false}
-                  isVideoOff={false}
-                  isAudioActive={webRTC.peerAudioActive.get(peer.ghostId) || false}
-                />
+                <div key={`remote-${peer.ghostId}`} className="relative group">
+                  <VideoTile
+                    stream={webRTC.remoteStreams.get(peer.ghostId)}
+                    ghostName={peer.ghostName}
+                    avatarId={peer.avatarId}
+                    isMuted={false}
+                    isLocal={false}
+                    isVideoOff={false}
+                    isAudioActive={webRTC.peerAudioActive.get(peer.ghostId) || false}
+                  />
+                  {/* Add Friend button — appears on hover */}
+                  {!sentFriendRequests.has(peer.ghostId) && (
+                    <button
+                      onClick={() => {
+                        if (signalingRef.current?.send) {
+                          signalingRef.current.send({
+                            type: 'friend-request',
+                            targetPeerId: peer.ghostId,
+                            ghostName,
+                            avatarId
+                          });
+                          setSentFriendRequests(prev => new Set([...prev, peer.ghostId]));
+                        }
+                      }}
+                      className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-all z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider"
+                      style={{ backgroundColor: '#F4600C', color: '#F5F0E8' }}
+                      title="Send Friend Request"
+                    >
+                      👤 Add Friend
+                    </button>
+                  )}
+                  {sentFriendRequests.has(peer.ghostId) && (
+                    <div
+                      className="absolute top-2 right-2 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider"
+                      style={{ backgroundColor: '#1A1A0F', color: '#F5F0E8', opacity: 0.8 }}
+                    >
+                      ✓ Request Sent
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           )}
@@ -627,6 +682,40 @@ export function Room() {
         targetPeerId={reportTarget}
         onSubmit={handleReport}
       />
+
+      {/* Friend Request Modal */}
+      <FriendRequestModal
+        isOpen={!!friendRequest}
+        request={friendRequest}
+        onClose={() => setFriendRequest(null)}
+        onReject={() => setFriendRequest(null)}
+        onAccept={() => {
+          if (signalingRef.current?.send && friendRequest) {
+            signalingRef.current.send({
+              type: 'friend-accept',
+              targetPeerId: friendRequest.ghostId,
+              partnerGhostName: friendRequest.ghostName,
+              partnerAvatarId: friendRequest.avatarId
+            });
+          }
+          setFriendRequest(null);
+        }}
+      />
+
+      {/* Friend accepted toast */}
+      {friendToast && (
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-3 px-6 py-4 rounded-2xl font-bold text-sm shadow-2xl"
+          style={{ backgroundColor: '#1A1A0F', border: '2px solid #F4600C', color: '#F5F0E8' }}>
+          <span>{friendToast}</span>
+          <button
+            onClick={() => navigate('/friends')}
+            className="ml-2 px-3 py-1 rounded-lg text-xs uppercase tracking-widest font-bold transition-all"
+            style={{ backgroundColor: '#F4600C', color: '#F5F0E8' }}
+          >
+            Open Chat
+          </button>
+        </div>
+      )}
     </div>
   );
 }

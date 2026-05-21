@@ -1,6 +1,34 @@
 const express = require('express');
 const router = express.Router();
 
+// GET /api/friends?ids=chatId1,chatId2  — bulk load friend chats by chatId list
+router.get('/', async (req, res) => {
+  try {
+    const ghostId = req.user.ghostId;
+    const ids = (req.query.ids || '').split(',').map(s => s.trim()).filter(Boolean);
+
+    if (ids.length === 0) {
+      return res.json({ friends: [] });
+    }
+
+    const friends = [];
+    for (const chatId of ids) {
+      const data = await req.redis.get(`friendship:${chatId}`);
+      if (!data) continue;
+      const f = JSON.parse(data);
+      // Only return chats where the requester is a participant
+      if (f.peer1 === ghostId || f.peer2 === ghostId) {
+        friends.push({ chatId, ...f });
+      }
+    }
+
+    res.json({ friends });
+  } catch (err) {
+    console.error('[FRIENDS] Error in GET /:', err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 router.get('/:chatId', async (req, res) => {
   try {
     const { chatId } = req.params;
