@@ -24,17 +24,12 @@ const AVATAR_COLORS = [
 // ─────────────────────────────────────────────────────────────
 function Navbar() {
   const [scrolled, setScrolled] = useState(false)
-  const { ghostName, avatarId } = useIdentity()
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50)
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
-
-  const getAvatarColor = (id) => {
-    return AVATAR_COLORS[(id - 1) % AVATAR_COLORS.length];
-  };
 
   return (
     <header
@@ -50,7 +45,7 @@ function Navbar() {
 
         {/* Links */}
         <nav className="hidden md:flex items-center gap-8">
-          {["Start", "Features", "How It Works", "Community", "Pricing"].map((item) => (
+          {["Features", "How It Works", "Community", "Pricing"].map((item) => (
             <a
               key={item}
               href={`#${item.toLowerCase().replace(/\s+/g, "-")}`}
@@ -62,18 +57,6 @@ function Navbar() {
           ))}
         </nav>
 
-        {/* Profile Badge */}
-        {ghostName && (
-          <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-white/5 backdrop-blur-sm border border-white/10">
-            <div
-              className="w-6 h-6 rounded-full flex-shrink-0"
-              style={{ backgroundColor: getAvatarColor(avatarId) }}
-            />
-            <span className="text-sm font-medium text-[#F5F0E8] truncate max-w-[120px]">
-              {ghostName}
-            </span>
-          </div>
-        )}
       </div>
     </header>
   )

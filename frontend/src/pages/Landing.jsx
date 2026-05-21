@@ -74,27 +74,46 @@ export function Landing() {
 
       {/* Modal overlay for room creation */}
       {showRoomModal && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="bg-[#0a0a0f] border border-white/10 rounded-xl p-8 w-96">
-            <h2 className="text-xl font-semibold text-white mb-4">Room Created!</h2>
-            <p className="text-white/70 mb-6">Share this link to invite someone:</p>
-
-            <div className="bg-white/5 border border-white/20 rounded-lg p-4 mb-6">
-              <input
-                type="text"
-                value={roomLink}
-                readOnly
-                className="w-full bg-transparent text-white text-sm outline-none"
-              />
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50"
+          style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowRoomModal(false); }}
+        >
+          <div
+            className="rounded-2xl p-8 w-[26rem] flex flex-col gap-5"
+            style={{
+              backgroundColor: '#111111',
+              border: '2px solid #000000',
+              boxShadow: '0 25px 60px rgba(0,0,0,0.8)'
+            }}
+          >
+            {/* Title */}
+            <div>
+              <h2 className="text-[22px] font-bold text-white mb-1">Room Created</h2>
+              <p className="text-white/50 text-sm">Share this link with others:</p>
             </div>
 
+            {/* Link field */}
+            <div
+              className="rounded-xl px-4 py-3"
+              style={{ backgroundColor: '#1e1e1e', border: '1px solid #333' }}
+            >
+              <p className="text-white/80 text-sm truncate select-all font-mono">
+                {roomLink}
+              </p>
+            </div>
+
+            {/* Buttons */}
             <div className="flex gap-3">
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(roomLink);
                   showToast('Link copied! Share it with your friend 🎉');
                 }}
-                className="flex-1 bg-[#F4600C] hover:bg-[#e05509] text-white px-4 py-2 rounded-lg font-medium transition"
+                className="flex-1 py-3 rounded-xl font-semibold text-white text-sm transition-all active:scale-95"
+                style={{ backgroundColor: '#2563eb' }}
+                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+                onMouseLeave={e => e.currentTarget.style.backgroundColor = '#2563eb'}
               >
                 Copy Link
               </button>
@@ -103,15 +122,19 @@ export function Landing() {
                   const roomId = roomLink.split('/room/')[1].split('?')[0];
                   navigate(`/room/${roomId}?code=${roomLink.split('code=')[1]}`);
                 }}
-                className="flex-1 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg font-medium transition"
+                className="flex-1 py-3 rounded-xl font-semibold text-white text-sm transition-all active:scale-95"
+                style={{ backgroundColor: '#2a2a2a', border: '1px solid #444' }}
+                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#333'}
+                onMouseLeave={e => e.currentTarget.style.backgroundColor = '#2a2a2a'}
               >
                 Enter Room
               </button>
             </div>
 
+            {/* Close */}
             <button
               onClick={() => setShowRoomModal(false)}
-              className="w-full mt-3 text-white/60 hover:text-white text-sm"
+              className="text-white/30 hover:text-white/60 text-sm transition-colors text-center"
             >
               Close
             </button>
