@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useIdentity } from '../hooks/useIdentity';
 import { useSignaling } from '../hooks/useSignaling';
 import { useWebRTC } from '../hooks/useWebRTC';
@@ -23,6 +23,8 @@ const AVATAR_COLORS = [
 export function Room() {
   // Context/hooks
   const { roomId: routeRoomId } = useParams();
+  const [searchParams] = useSearchParams();
+  const routeRoomCode = searchParams.get('code'); // present when arriving via shared link
   const navigate = useNavigate();
   const { token, ghostId, ghostName, avatarId, isLoaded } = useIdentity();
   
@@ -266,6 +268,7 @@ export function Room() {
       }
 
       if (!roomId && !routeRoomId) {
+        // No room specified — join a random stranger room
         try {
           const result = await joinRoom('random');
           setRoomId(result.roomId);
@@ -277,12 +280,35 @@ export function Room() {
           console.error('Error joining room:', err);
           navigate('/');
         }
+      } else if (routeRoomId && !roomId) {
+        // Arrived via shared link — must register with backend so signaling works
+        try {
+          let result;
+          if (routeRoomCode) {
+            // Joining via shared invite link: POST /api/rooms/join { mode:'group', roomCode }
+            result = await joinRoom('group', routeRoomCode);
+            roomModeRef.current = 'group';
+          } else {
+            // No room code in URL — redirect home (room links always include code)
+            console.warn('[Room] No room code in URL, cannot join group room');
+            navigate('/');
+            return;
+          }
+          // Use roomId from URL (creator embedded it) — it matches what Redis has
+          setRoomId(routeRoomId);
+          setRoomCode(result.roomCode);
+          setPeers(result.peers || []);
+          setLoading(false);
+        } catch (err) {
+          console.error('Error joining room via link:', err);
+          navigate('/');
+        }
       } else if (roomId) {
         setLoading(false);
       }
     };
     joinRoomFn();
-  }, [roomId, routeRoomId, navigate, isLoaded, token]);
+  }, [roomId, routeRoomId, routeRoomCode, navigate, isLoaded, token]);
 
   // Reset the join-room guard whenever roomId changes so a new room always sends join-room.
   useEffect(() => {

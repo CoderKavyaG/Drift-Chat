@@ -85,7 +85,8 @@ function Navbar() {
 function Hero({ onStartDrifting, onCreateRoom, onViewMap, isLoading }) {
 
   return (
-    <section 
+    <section
+      id="start"
       className="relative w-full min-h-[100svh] flex flex-col justify-between overflow-hidden"
       style={{
         backgroundColor: COLORS.orange,
@@ -325,7 +326,7 @@ function StatsSection() {
 // ─────────────────────────────────────────────────────────────
 function FeaturesSection() {
   return (
-    <section className="w-full py-24 px-6 md:px-10" style={{ backgroundColor: COLORS.cream }}>
+    <section id="pricing" className="w-full py-24 px-6 md:px-10" style={{ backgroundColor: COLORS.cream }}>
       <div className="max-w-[1400px] mx-auto flex flex-col md:flex-row gap-12">
         
         <div className="w-full md:w-[55%] flex flex-col pr-0 md:pr-10">
@@ -420,7 +421,7 @@ function Footer() {
         </nav>
         
         <div className="text-white/20 text-xs font-medium">
-          © 2024 DRIFT INC. ALL RIGHTS RESERVED.
+          © 2026 DRIFT. ALL RIGHTS RESERVED.
         </div>
       </div>
     </footer>

@@ -9,6 +9,12 @@ export function Landing() {
   const [isLoading, setIsLoading] = useState(false);
   const [showRoomModal, setShowRoomModal] = useState(false);
   const [roomLink, setRoomLink] = useState(null);
+  const [toast, setToast] = useState(null);
+
+  const showToast = (msg, type = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   const handleStartDrifting = async () => {
     setIsLoading(true);
@@ -17,7 +23,7 @@ export function Landing() {
       navigate(`/room/${result.roomId}`);
     } catch (err) {
       console.error('Error joining room:', err);
-      alert('Failed to join room');
+      showToast('Failed to join room — try again', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -31,7 +37,7 @@ export function Landing() {
       setShowRoomModal(true);
     } catch (err) {
       console.error('Error creating room:', err);
-      alert('Failed to create room');
+      showToast('Failed to create room — try again', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -44,9 +50,22 @@ export function Landing() {
   return (
     <div className="relative w-full">
       <GhostIdentityBadge />
-      
+
+      {/* Toast notification */}
+      {toast && (
+        <div
+          className={`fixed top-6 left-1/2 -translate-x-1/2 z-[9999] px-6 py-3 rounded-full font-bold text-sm uppercase tracking-widest shadow-2xl transition-all ${
+            toast.type === 'error'
+              ? 'bg-red-500 text-white'
+              : 'bg-[#F4600C] text-[#F5F0E8]'
+          }`}
+        >
+          {toast.msg}
+        </div>
+      )}
+
       {/* Landing page component with button handlers */}
-      <LandingPage 
+      <LandingPage
         onStartDrifting={handleStartDrifting}
         onCreateRoom={handleCreateRoom}
         onViewMap={handleViewMap}
@@ -57,9 +76,9 @@ export function Landing() {
       {showRoomModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
           <div className="bg-[#0a0a0f] border border-white/10 rounded-xl p-8 w-96">
-            <h2 className="text-xl font-semibold text-white mb-4">Room Created</h2>
-            <p className="text-white/70 mb-6">Share this link with others:</p>
-            
+            <h2 className="text-xl font-semibold text-white mb-4">Room Created!</h2>
+            <p className="text-white/70 mb-6">Share this link to invite someone:</p>
+
             <div className="bg-white/5 border border-white/20 rounded-lg p-4 mb-6">
               <input
                 type="text"
@@ -73,16 +92,16 @@ export function Landing() {
               <button
                 onClick={() => {
                   navigator.clipboard.writeText(roomLink);
-                  alert('Link copied!');
+                  showToast('Link copied! Share it with your friend 🎉');
                 }}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition"
+                className="flex-1 bg-[#F4600C] hover:bg-[#e05509] text-white px-4 py-2 rounded-lg font-medium transition"
               >
                 Copy Link
               </button>
               <button
                 onClick={() => {
                   const roomId = roomLink.split('/room/')[1].split('?')[0];
-                  navigate(`/room/${roomId}`);
+                  navigate(`/room/${roomId}?code=${roomLink.split('code=')[1]}`);
                 }}
                 className="flex-1 bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg font-medium transition"
               >
@@ -99,8 +118,6 @@ export function Landing() {
           </div>
         </div>
       )}
-
-      {/* CTA Buttons injected into Hero section via LandingPage overlay */}
     </div>
   );
 }
