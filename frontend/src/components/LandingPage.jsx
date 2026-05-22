@@ -44,21 +44,22 @@ function Navbar() {
         </div>
 
         {/* Links */}
-        <nav className="hidden md:flex items-center gap-8">
+        <nav className="hidden md:flex items-center gap-10">
           <a
             href="/friends"
-            className="text-[#F4600C] text-sm uppercase tracking-widest font-bold hover:text-white transition-colors relative group"
+            className="text-[#F5F0E8] text-sm uppercase tracking-widest font-bold hover:text-[#1A1A0F] transition-colors relative group"
           >
-            Friends
+            <span className="relative z-10">Friends</span>
+            <span className="absolute left-0 bottom-[-4px] w-0 h-[2px] bg-[#1A1A0F] transition-all duration-300 group-hover:w-full" />
           </a>
-          {["Features", "How It Works", "Community", "Pricing"].map((item) => (
+          {["Features", "How It Works"].map((item) => (
             <a
               key={item}
               href={`#${item.toLowerCase().replace(/\s+/g, "-")}`}
-              className="text-[#F5F0E8] text-sm uppercase tracking-widest font-semibold hover:text-[#F4600C] transition-colors relative group"
+              className="text-[#F5F0E8] text-sm uppercase tracking-widest font-semibold hover:text-[#1A1A0F] transition-colors relative group"
             >
               <span className="relative z-10">{item}</span>
-              <span className="absolute left-0 bottom-0 w-0 h-[2px] bg-[#F4600C] transition-all duration-300 group-hover:w-full" />
+              <span className="absolute left-0 bottom-[-4px] w-0 h-[2px] bg-[#1A1A0F] transition-all duration-300 group-hover:w-full" />
             </a>
           ))}
         </nav>
