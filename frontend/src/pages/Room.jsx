@@ -254,6 +254,10 @@ export function Room() {
   // Effects - ALL FOURTH
   // CRITICAL: Initialize stream FIRST before any other operations
   useEffect(() => {
+    if (!isLoaded) {
+      return;
+    }
+
     if (streamInitializedRef.current) {
       console.log('[Room] Stream already initialized, skipping');
       return;
@@ -279,9 +283,7 @@ export function Room() {
       }
     };
     
-    if (isLoaded) {
-      initStream();
-    }
+    initStream();
   // webRTC intentionally excluded — accessed via webRTCRef.current which is always current.
   // isLoaded is the only dep that should re-trigger this (it gates getUserMedia).
   }, [isLoaded]);
