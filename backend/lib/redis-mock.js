@@ -170,6 +170,22 @@ class InMemoryRedis {
     return list.slice(s, e + 1);
   }
 
+  async ltrim(key, start, stop) {
+    const list = this.lists.get(key);
+    if (!list) return 'OK';
+    const len = list.length;
+    let s = start < 0 ? len + start : start;
+    let e = stop < 0 ? len + stop : stop;
+    s = Math.max(0, s);
+    e = Math.min(len - 1, e);
+    if (s > e) {
+      this.lists.set(key, []);
+    } else {
+      this.lists.set(key, list.slice(s, e + 1));
+    }
+    return 'OK';
+  }
+
   async expire(key, seconds) {
     // Simplified: just mark it as valid, don't actually expire
     return 1;

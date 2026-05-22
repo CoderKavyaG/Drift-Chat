@@ -486,15 +486,7 @@ function initSignaling(server, redis) {
 
     // Sanitize text
     const sanitized = text.replace(/<[^>]*>/g, '').substring(0, 500);
-    const msgObj = { ghostId, ghostName, text: sanitized, timestamp: Date.now() };
-
-    // Persist to Redis (same list the REST endpoint reads)
-    try {
-      await redis.lpush(`friendchat:${chatId}`, JSON.stringify(msgObj));
-      await redis.ltrim(`friendchat:${chatId}`, 0, 499);
-    } catch (err) {
-      console.error('[WS] Error saving friend chat message:', err.message);
-    }
+    const timestamp = Date.now();
 
     // Relay to the other peer in real-time
     const otherPeerId = friendship.peer1 === ghostId ? friendship.peer2 : friendship.peer1;
@@ -506,7 +498,7 @@ function initSignaling(server, redis) {
         ghostId,
         ghostName,
         text: sanitized,
-        timestamp: msgObj.timestamp
+        timestamp
       }));
     }
   }
