@@ -14,43 +14,72 @@ const locationsRoutes = require('./routes/locations');
 const app = express();
 
 // Try to use real Redis, fall back to in-memory mock if not available
-let redis;
+const redisContainer = { current: null };
 let usesMock = false;
+
+const redis = new Proxy({}, {
+  get(target, prop) {
+    const client = redisContainer.current;
+    if (!client) return undefined;
+    const value = client[prop];
+    if (typeof value === 'function') {
+      return value.bind(client);
+    }
+    return value;
+  }
+});
 
 // Check environment variable for forcing mock
 if (process.env.USE_REDIS_MOCK === 'true') {
   console.log('[REDIS] Forcing in-memory mock');
   usesMock = true;
   const InMemoryRedis = require('./lib/redis-mock');
-  redis = new InMemoryRedis();
+  redisContainer.current = new InMemoryRedis();
 } else {
   // Try to use real Redis, but be quick about falling back to mock
   try {
     const Redis = require('ioredis');
-    redis = new Redis({
-      host: process.env.REDIS_URL?.split('//')[1]?.split(':')[0] || 'localhost',
-      port: process.env.REDIS_URL?.split(':')[2]?.split('/')[0] || 6379,
+    const redisOptions = {
       retryStrategy: () => null, // Disable auto-retry
       maxRetriesPerRequest: 1,
       enableReadyCheck: false,
       enableOfflineQueue: false,
-      connectTimeout: 1000
-    });
+      connectTimeout: 5000 // 5 seconds for secure TLS handshakes
+    };
+
+    if (process.env.REDIS_URL) {
+      // Upstash and secure connections need TLS enabled in ioredis options
+      if (process.env.REDIS_URL.startsWith('rediss://') || process.env.REDIS_URL.includes('upstash.io') || process.env.REDIS_URL.includes('aivencloud.com')) {
+        console.log('[REDIS] Enabling secure TLS connection options');
+        redisOptions.tls = { rejectUnauthorized: false };
+      }
+      console.log('[REDIS] Connecting via URL:', process.env.REDIS_URL.replace(/:[^:@]+@/, ':****@')); // Hide password in logs
+      redisContainer.current = new Redis(process.env.REDIS_URL, redisOptions);
+    } else {
+      console.log('[REDIS] No REDIS_URL provided, connecting to localhost');
+      redisContainer.current = new Redis({
+        host: 'localhost',
+        port: 6379,
+        ...redisOptions
+      });
+    }
     
     // Don't wait for connection - use mock if connection fails
-    redis.on('error', (err) => {
+    redisContainer.current.on('error', (err) => {
       if (!usesMock) {
+        console.error('[REDIS] Live Redis error:', err.message);
         console.log('[REDIS] Real Redis unavailable, switching to in-memory mock');
         usesMock = true;
         const InMemoryRedis = require('./lib/redis-mock');
-        redis = new InMemoryRedis();
+        redisContainer.current = new InMemoryRedis();
       }
     });
   } catch (err) {
+    console.error('[REDIS] Creation error:', err.message);
     console.log('[REDIS] Using in-memory mock instead of ioredis');
     usesMock = true;
     const InMemoryRedis = require('./lib/redis-mock');
-    redis = new InMemoryRedis();
+    redisContainer.current = new InMemoryRedis();
   }
 }
 

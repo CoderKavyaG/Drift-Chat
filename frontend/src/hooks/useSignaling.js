@@ -13,14 +13,9 @@ export function useSignaling(token, onMessage) {
   const isCleaningUpRef = useRef(false);
   const [connectionState, setConnectionState] = useState('disconnected');
 
-  // Keep refs in sync
-  useEffect(() => {
-    tokenRef.current = token;
-  }, [token]);
-
-  useEffect(() => {
-    onMessageRef.current = onMessage;
-  }, [onMessage]);
+  // Synchronously keep refs in sync with latest props/callbacks to avoid async timing issues
+  tokenRef.current = token;
+  onMessageRef.current = onMessage;
 
   const setupHeartbeat = useCallback((ws) => {
     if (heartbeatTimerRef.current) {
@@ -61,7 +56,8 @@ export function useSignaling(token, onMessage) {
     console.log('[WS] Connecting...');
 
     try {
-      const wsUrl = `${WS_URL}/ws?token=${encodeURIComponent(tokenRef.current)}`;
+      const baseUrl = WS_URL.endsWith('/') ? WS_URL.slice(0, -1) : WS_URL;
+      const wsUrl = `${baseUrl}/ws?token=${encodeURIComponent(tokenRef.current)}`;
       console.log('[WS] URL:', wsUrl.substring(0, 50) + '...');
       
       const ws = new WebSocket(wsUrl);

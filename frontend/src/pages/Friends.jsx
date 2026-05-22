@@ -48,19 +48,19 @@ export function Friends() {
       // Validate against backend (filter out expired / unauthorized)
       try {
         const { friends: verified } = await getFriends(saved.map(f => f.chatId));
-        const verifiedIds = new Set(verified.map(f => f.chatId));
+        const verifiedIds = new Set(verified.map(f => f.chatId?.toLowerCase()));
 
         // Merge localStorage metadata with backend-verified data
         const merged = saved
-          .filter(f => verifiedIds.has(f.chatId))
+          .filter(f => verifiedIds.has(f.chatId?.toLowerCase()))
           .map(f => {
-            const backendData = verified.find(v => v.chatId === f.chatId);
+            const backendData = verified.find(v => v.chatId?.toLowerCase() === f.chatId?.toLowerCase());
             return { ...f, expiresAt: backendData?.expiresAt };
           });
 
         // Remove expired ones from localStorage
         saved
-          .filter(f => !verifiedIds.has(f.chatId))
+          .filter(f => !verifiedIds.has(f.chatId?.toLowerCase()))
           .forEach(f => removeFriend(f.chatId));
 
         setFriends(merged);

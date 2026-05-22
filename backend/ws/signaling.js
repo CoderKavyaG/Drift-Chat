@@ -448,26 +448,26 @@ function initSignaling(server, redis) {
         3 * 24 * 60 * 60 // 72 hours
       );
 
-      const acceptMessage = {
-        type: 'friend-accepted',
-        sharedChatId,
-        partnerGhostName,
-        partnerAvatarId
-      };
-
-      // Send to both peers
+      // Send B's details (acceptor) to A (sender)
       const targetWs = connections.get(targetPeerId);
       if (targetWs && targetWs.readyState === 1) {
-        acceptMessage.partnerGhostName = ghostName;
-        acceptMessage.partnerAvatarId = avatarId;
-        targetWs.send(JSON.stringify(acceptMessage));
+        targetWs.send(JSON.stringify({
+          type: 'friend-accepted',
+          sharedChatId,
+          partnerGhostName: ghostName,
+          partnerAvatarId: avatarId
+        }));
       }
 
+      // Send A's details (sender) to B (acceptor)
       const myWs = connections.get(ghostId);
       if (myWs && myWs.readyState === 1) {
-        acceptMessage.partnerGhostName = partnerGhostName;
-        acceptMessage.partnerAvatarId = partnerAvatarId;
-        myWs.send(JSON.stringify(acceptMessage));
+        myWs.send(JSON.stringify({
+          type: 'friend-accepted',
+          sharedChatId,
+          partnerGhostName,
+          partnerAvatarId
+        }));
       }
     } catch (err) {
       console.error('[WS] Error accepting friend request:', err.message);

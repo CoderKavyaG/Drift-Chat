@@ -54,7 +54,9 @@ export function FriendChat() {
 
   // Handle incoming real-time friend messages
   const handleMessage = useCallback((message) => {
-    if (message.type === 'friend-chat-message' && message.chatId === chatId) {
+    console.log('[FriendChat] Received WebSocket message:', message);
+    if (message.type === 'friend-chat-message' && message.chatId?.toLowerCase() === chatId?.toLowerCase()) {
+      console.log('[FriendChat] Message matches current chat! Appending to messages.');
       setMessages(prev => [...prev, {
         ghostId: message.ghostId,
         ghostName: message.ghostName,
@@ -62,6 +64,13 @@ export function FriendChat() {
         timestamp: message.timestamp,
         isLocal: message.ghostId === ghostId
       }]);
+    } else {
+      console.log('[FriendChat] Received message but filtered out:', {
+        typeMatches: message.type === 'friend-chat-message',
+        chatIdMatches: message.chatId?.toLowerCase() === chatId?.toLowerCase(),
+        messageChatId: message.chatId,
+        currentChatId: chatId
+      });
     }
   }, [chatId, ghostId]);
 
@@ -73,12 +82,13 @@ export function FriendChat() {
 
     const loadFriendship = async () => {
       try {
+        console.log('[FriendChat] Loading friendship details and history...');
         const data = await getFriendChat(chatId);
         setFriendship(data);
 
         // Determine partner info from localStorage saved friends
         const saved = getSavedFriends();
-        const savedEntry = saved.find(f => f.chatId === chatId);
+        const savedEntry = saved.find(f => f.chatId?.toLowerCase() === chatId?.toLowerCase());
         if (savedEntry) {
           setPartnerInfo({
             ghostName: savedEntry.partnerGhostName,
@@ -91,7 +101,17 @@ export function FriendChat() {
           ...m,
           isLocal: m.ghostId === ghostId
         }));
-        setMessages(msgs);
+        
+        // Merge with any real-time messages that might have already been added to the state during load
+        setMessages(prev => {
+          console.log('[FriendChat] Merging historical messages with current state messages:', {
+            historicalCount: msgs.length,
+            currentStateCount: prev.length
+          });
+          const existingKeys = new Set(prev.map(m => `${m.timestamp}_${m.ghostId}_${m.text}`));
+          const uniqueHistorical = msgs.filter(m => !existingKeys.has(`${m.timestamp}_${m.ghostId}_${m.text}`));
+          return [...uniqueHistorical, ...prev];
+        });
         setLoading(false);
       } catch (err) {
         console.error('Error loading friend chat:', err);
